@@ -1,0 +1,424 @@
+#To edit and compare internal_properties, use WINDEV integrated tools.
+#Internal properties refer to the properties of controls in windows, reports, etc.
+info :
+ name : pWindowsUpdate
+ major_version : 28
+ minor_version : 0
+ type : 7
+ description : ""
+ subtype : 0
+procedure_set :
+ identifier : 0x1a1abfcd00d9f139
+ internal_properties : CAAAAAgAAABGLu41kG7fjQV3iS4F72qmnKaNh5694reolNKIW0iw
+ code_elements :
+  type_code : 31
+  p_codes :
+   -
+     internal_properties : CAAAAAgAAABO2mHM9zrZHtoiLxPr6Un5h33LKxxceoMQMbN9Faur+xQPDoLcBj+k3W6IgLxqi05du1hHRlZkJta9pb3KFVa5p0MvIZozc6KcGT/BTI46CdVNs3QSTeWA+zDlhWKVsy5y3DV6v1zTXSWQTMl2mf7RMK7CpgN9ZgvIYVT/tLAw3bz0wHFQb1By6WudrW8zloUNe9QDxpR8jW5UOrbznl/rzLxv/gyeSTGnpGOmhkNYuuXINYExqg==
+     code : |1-
+      
+      CONSTANTE
+      	WUA_OBJET_SESSION    = "Microsoft.Update.Session"
+      	WUA_OBJET_COLLECTION = "Microsoft.Update.UpdateColl"
+      	WUA_DEFAULT_FILTRE   = "IsInstalled=0 and Type='Software'"
+      FIN
+      
+      // Structure représentant une Update
+      stUpdate est une structure
+      	sTitre            est une chaine // Titre
+      	sType             est une chaine // Type (1 Software ou 2 Driver)
+      	bDejaTelecharge   est un booléen // Vrai si téléchargé mais pas installé, sinon Faux
+      	nRAMNecessaire    est un entier  // Mémoire minimale vive nécéssaire à l'update (en MegaOctets)
+      	nDisqueNecessaire est un entier  // Mémoire disque nécéssaire (en MegaOctets)
+      	nCPUNecessaire    est un entier  // Vitesse CPU nécéssaire	(en Megahertz)
+      	sNiveau           est une chaine // Niveau de l'update (Critical, Important, Moderate, Low)
+      	sDescription      est une chaine // Description détaillée
+      FIN
+      
+      PRIVE
+      	gtaListeUpdate est un tableau associatif de objets OLE dynamique // Liste des updates
+      	gsMsgErreur    est une chaine                                    // Dernier message d'erreur
+     type : 720896
+  procedures :
+   -
+     name : UpdateListe
+     internal_properties : CAAAAAgAAAD5Sypa2QcSnu+rx5ExyvCeOBs4O+IyWAizjqpzLVJm2NaR8lEoG1iAK1A2hsmLJm/Sh+1lCZjoOpvGo2JplSles+VCvqVw9WwQmzjUA/RBzTvas0jGLctpGGKYWS1sfflqy7YxlBlwO0b6EGzkbEk9DcIusEixTWvFF8DCmbhzQNfpB46oc0tPfuY8KzEUkrvJhddtvgfgBIpyalhsR1PHgGsQ8UthjS7GiycaX8nNCvHGag==
+     procedure_id : 1881026879152628391
+     type_code : 15
+     code : |1-
+      // Résumé : Renvoit la liste des mises à jour disponibles
+      // Syntaxe :
+      //[ <Résultat> = ] UpdateListe ( [<sFiltre>])
+      //
+      // Paramètres :
+      //	sFiltre (valeur par défaut="IsInstalled=0 and Type='Software'") : Filtre de recherche
+      // Valeur de retour :
+      // 	chaîne : // Identifiant + TAB + TitreMAJ
+      //
+      // Exemple :
+      //// Traitement automatique des erreurs :   exécuter le bloc de code CAS ERREUR
+      //
+      // Traitement automatique des exceptions :   exécuter le bloc de code CAS EXCEPTION:
+      //
+      
+      Procédure UpdateListe(sFiltre=WUA_DEFAULT_FILTRE)
+      
+      // Variables
+      oUpdateSession  est un objet OLE dynamique = allouer un objet OLE(WUA_OBJET_SESSION) // Point d'entrée de l'API WUA
+      oUpdateSearcher est un objet OLE dynamique = oUpdateSession>>CreateupdateSearcher() // Objet pour rechercher la mise à jour
+      oSearchResult   est un objet OLE dynamique = oUpdateSearcher>>Search(sFiltre) // Objet qui contient les résultats de la recherche
+      oUpdate         est un objet OLE dynamique = Null // Objet représentant une MAJ
+      oIdentity       est un objet OLE dynamique = Null // Objet qui contient l'identifiant unique d'une mise à jour
+      sListe          est une chaine
+      
+      // Parcours des MAJs
+      POUR I = 0 _A_ (oSearchResult>>Updates>>Count) - 1
+      	// Récupération de l'objet
+      	oUpdate = oSearchResult>>Updates>>Item(I)
+      	
+      	// Interface Identity pour récupérer l'ID unique de la mise à jour
+      	oIdentity = oUpdate>>Identity
+      	
+      	// Ajout dans la liste
+      	gtaListeUpdate[oIdentity>>UpdateID] = oUpdate
+      	sListe += [RC] + oIdentity>>UpdateID + TAB + oUpdate>>Title + TAB + oUpdate>>IsDownloaded
+      FIN
+      
+      RENVOYER sListe
+      
+      CAS ERREUR:
+      	gsMsgErreur = <§@1a1abfcd00d8f1390004§>+RC+<§@1a1abfcd00d8f1390005§>
+      	RENVOYER ""
+      CAS EXCEPTION:
+      	gsMsgErreur = <§@1a1abfcd00d8f1390007§>+RC+<§@1a1abfcd00d8f1390006§>
+      	RENVOYER ""
+      FIN:
+      	SI oUpdateSession <> Null  ALORS libérer oUpdateSession
+      	SI oUpdateSearcher <> Null ALORS libérer oUpdateSearcher
+      	SI oSearchResult <> Null   ALORS libérer oSearchResult
+     type : 458752
+   -
+     name : UpdateInstalle
+     internal_properties : CAAAAAgAAACowfvPlFCbHYNoGuXIi+f5OXRmA7vbQdCSAGy+bp/Z2AT2bRrfCy+Dm8SOXNWjrju/wWEpOENOHUJyGeqqs7tJ4tnxqAolBECMeImoGAbbE6gxvzPwWvw80hPd68vnn3Uzpj9xaWMEvjqRnwLWF+sTrKdlENXh/3ylCiU2adN9cjIOhDDE5R+CRWdbJTyLXVNm3tBVAOVxkA==
+     procedure_id : 1881034051748437621
+     type_code : 15
+     code : |1-
+      // Résumé : Installation d'une mise à jour
+      // Syntaxe :
+      //[ <Résultat> = ] UpdateInstalle (<sIdentifiant>)
+      //
+      // Paramètres :
+      //	sIdentifiant : Identifiant de la mise à jour à installer
+      // Valeur de retour :
+      // 	booléen : // Vrai si aucun problème, sinon Faux
+      //
+      // Exemple :
+      //
+      Procédure UpdateInstalle(sIdentifiant)
+      
+      // Variables
+      oUpdatesToInstall est un objet OLE dynamique = allouer un objet OLE(WUA_OBJET_COLLECTION) // Collection pour contenir des objets Update
+      oUpdateSession  est un objet OLE dynamique = allouer un objet OLE(WUA_OBJET_SESSION) // Point d'entrée de l'API WUA
+      oUpdateSearcher est un objet OLE dynamique = oUpdateSession>>CreateupdateSearcher() // Objet pour effectuer des recherches de MAJ
+      oSearchResult   est un objet OLE dynamique = oUpdateSearcher>>Search(ChaineConstruit("UpdateID='%1'",sIdentifiant)) // Lancement de la recherche
+      oUpdate         est un objet OLE dynamique = Null  // Objet qui représente une mise à jour
+      oInstaller      est un objet OLE dynamique = Null  // Objet qui contient les mises à jour à installer
+      oInstallResult  est un objet OLE dynamique
+      
+      // Ajout des MAJs à installer
+      POUR I = 0 _A_ (oSearchResult>>Updates>>Count)-1
+      	oUpdate = oSearchResult>>Updates>>Item(I)
+      	SI oUpdate>>IsDownloaded ALORS
+      		oUpdatesToInstall>>Add(oUpdate)
+      	FIN
+      FIN
+      
+      // Création d'un objet UpdateInstaller et lancement de l'installation
+      oInstaller = oUpdateSession>>CreateUpdateInstaller()
+      oInstaller>>Updates = oUpdatesToInstall
+      oInstallResult = oInstaller>>Install()
+      
+      RENVOYER Vrai
+      
+      CAS ERREUR:
+      	gsMsgErreur = ChaîneConstruit(<§@1a1abfcd00d8f1390002§>,sIdentifiant)
+      	RENVOYER Faux
+      CAS EXCEPTION:
+      	gsMsgErreur = ChaîneConstruit(<§@1a1abfcd00d8f1390003§>,sIdentifiant)
+      	RENVOYER Faux
+      FIN:
+      	SI oUpdatesToInstall <> Null ALORS libérer oUpdatesToInstall
+      	SI oUpdateSession <> Null ALORS libérer oUpdateSession
+      	SI oUpdateSearcher <> Null ALORS libérer oUpdateSearcher
+      	SI oSearchResult <> Null ALORS libérer oSearchResult
+     type : 458752
+   -
+     name : UpdateErreur
+     procedure_id : 1881034206367361875
+     type_code : 15
+     code : |1-
+      // Résumé : Indique le dernier message d'erreur
+      // Syntaxe :
+      //[ <Résultat> = ] UpdateErreur ()
+      //
+      // Paramètres :
+      //	Aucun
+      // Valeur de retour :
+      // 	chaîne : // Message d'erreur
+      //
+      // Exemple :
+      // Indiquez ici un exemple d'utilisation.
+      //
+      Procédure UpdateErreur()
+      
+      RENVOYER gsMsgErreur
+     type : 458752
+   -
+     name : UpdateTelecharge
+     internal_properties : CAAAAAgAAABEn/aoSTb/dputTP/ansFiTfcOU6U8y2KfKaP3MZPdlMMiNpOts0AtH3ZKqzuFDu7z20eOZzW2u37pi7vQl/JnEXCAeZrAQX+y0ycH4b7r2XlVmTpYCJ1n9ghvFbf8QIiryxfsC7NBI1QuXdj2UuLKEDQ/+x+pwPnds/mO59Dcn0yRus90z7Yn54aPBYLk0FxzzS0gvQXIRUEDJXOvwou0HFI20S8WXQ==
+     procedure_id : 1881035275814270768
+     type_code : 15
+     code : |1-
+      // Résumé : Télécharge une mise à jour
+      // Syntaxe :
+      //[ <Résultat> = ] UpdateTelecharge (<sIdentifiant>)
+      //
+      // Paramètres :
+      //	sIdentifiant : Identifiant de la mise à jour à télécharger
+      // Valeur de retour :
+      // 	booléen : // Vrai si aucun problème, sinon Faux
+      //
+      // Exemple :
+      //
+      Procédure UpdateTelecharge(sIdentifiant)
+      
+      // Variables
+      oUpdateSession  est un objet OLE dynamique = allouer un objet OLE(WUA_OBJET_SESSION) // Point d'entrée de l'API WUA
+      oUpdatesToDownload est un objet OLE dynamique = allouer un objet OLE(WUA_OBJET_COLLECTION) // Collection pour contenir des objets Update
+      oUpdateSearcher est un objet OLE dynamique = oUpdateSession>>CreateupdateSearcher() // Objet pour rechercher la mise à jour
+      oSearchResult   est un objet OLE dynamique = oUpdateSearcher>>Search(ChaineConstruit("UpdateID='%1'",sIdentifiant)) // Objet contenant les résultats
+      oUpdate         est un objet OLE dynamique = Null // Objet qui représente une mise à jour
+      oDownloader     est un objet OLE dynamique = Null // Objet permettant de télécharger une mise à jour
+      oIdentity       est un objet OLE dynamique = Null // Objet qui contient l'identifiant unique d'une mise à jour
+      
+      // Ajout des MAJs à télécharger
+      POUR I = 0 _A_ (oSearchResult>>Updates>>Count)-1
+      	oUpdate = oSearchResult>>Updates>>Item(I)
+      	oUpdatesToDownload>>Add(oUpdate)
+      FIN
+      
+      // Téléchargement des MAJs
+      oDownloader = oUpdateSession>>CreateUpdateDownloader() 
+      oDownloader>>Updates = oUpdatesToDownload
+      oDownloader>>Download()
+      
+      // Suppression de l'update de la liste (elle n'est plus d'actualité)
+      oIdentity = oUpdate>>Identity
+      SI PAS gtaListeUpdate[oIdentity>>UpdateID]..Vide ALORS TableauSupprime(gtaListeUpdate,oIdentity>>UpdateID)
+      
+      RENVOYER Vrai
+      
+      CAS ERREUR:
+      	gsMsgErreur = ChaîneConstruit(<§@1a1abfcd00d8f1390008§>,sIdentifiant + rc + ErreurInfo(errComplet))
+      	RENVOYER Faux
+      CAS EXCEPTION:
+      	gsMsgErreur = ChaîneConstruit(<§@1a1abfcd00d8f1390009§>,sIdentifiant + rc + ErreurInfo(errComplet))
+      	RENVOYER Faux
+      FIN:
+      	SI oUpdateSession <> Null ALORS libérer oUpdateSession
+      	SI oUpdatesToDownload <> Null ALORS libérer oUpdatesToDownload
+      	SI oUpdateSearcher <> Null ALORS libérer oUpdateSearcher
+      	SI oSearchResult <> Null ALORS libérer oSearchResult
+      	SI oDownloader <> Null ALORS libérer oDownloader
+     type : 458752
+   -
+     name : UpdateDetail
+     internal_properties : CAAAAAgAAAD3uwgseA69Y/dkKra0u76xpkdIa9s09L4ahVzWan2KKzA1cMObndiH1h0w5+KcUDcrS4pzpHw6nlZYcaPJml2BsnUO0PH8sL99F3IWA65tH4p5nVCpdkjwNZoan/6vvMYVJxe3cw6H70S7RMzx64xyvFiXhIs8bstHPJj0ToVwtRbJfsiTFkxPjNkEX/p5M/JCM+TCpjUmj5daQvnkqzMMILK4N1p8cuhBiZxKGPsxeD4TmSQQ
+     procedure_id : 1881280879212566281
+     type_code : 15
+     code : |1-
+      // Résumé : Informations plus précises sur une MAJ particulière
+      // Syntaxe :
+      //[ <Résultat> = ] UpdateDetail (<sIdentifiant>)
+      //
+      // Paramètres :
+      //	sIdentifiant : Identifiant de la mise à jour
+      // Valeur de retour :
+      // 	Type indéterminé : // 	Aucune
+      //
+      // Exemple :
+      //
+      Procédure UpdateDetail(sIdentifiant)
+      
+      // Variable
+      pstUpdate est un stUpdate dynamique = Null
+      oUpdateSession  est un objet OLE dynamique = Null // Point d'entrée de l'API WUA
+      oUpdateSearcher est un objet OLE dynamique = Null // Objet pour effectuer des recherches
+      oSearchResult   est un objet OLE dynamique = Null // Objet qui contiendra les résultats de la recherche
+      oUpdate         est un objet OLE dynamique = Null // Objet qui représente une mise à jour
+      oIdentity       est un objet OLE dynamique = Null // Objet qui contient l'identifiant unique d'une mise à jour
+      
+      // Avant de la chercher, l'update est elle déja en mémoire ?
+      SI PAS gtaListeUpdate[sIdentifiant]..Vide ALORS
+      	oUpdate = gtaListeUpdate[sIdentifiant]
+      	pstUpdate = _UpdateStructure(oUpdate)
+      	RENVOYER pstUpdate	
+      FIN
+      
+      // Initialisation de la recherche
+      oUpdateSession = allouer un objet OLE(WUA_OBJET_SESSION) 
+      oUpdateSearcher = oUpdateSession>>CreateupdateSearcher()
+      oSearchResult = oUpdateSearcher>>Search(ChaineConstruit("UpdateID='%1'",sIdentifiant))
+      
+      // Recherche de l'update
+      SI oSearchResult>>Updates>>Count > 0 ALORS
+      	oUpdate = oSearchResult>>Updates>>Item(0)
+      	
+      	// Insertion de l'update dans la liste
+      	oIdentity = oUpdate>>Identity
+      	gtaListeUpdate[oIdentity>>UpdateID] = oUpdate
+      	
+      	pstUpdate = _UpdateStructure(oUpdate)
+      
+      	RENVOYER pstUpdate
+      SINON
+      	gsMsgErreur = <§@1a1abfcd00d8f139000a§>
+      	RENVOYER Null	
+      FIN
+      
+      CAS ERREUR:
+      	gsMsgErreur = <§@1a1abfcd00d8f1390000§>
+      	RENVOYER Null
+      CAS EXCEPTION:
+      	gsMsgErreur = <§@1a1abfcd00d8f1390001§>
+      	RENVOYER Null
+      FIN:
+      	Si oUpdateSession <> Null ALORS Liberer oUpdateSession
+      	SI oUpdateSearcher <> Null ALORS libérer oUpdateSearcher
+      	SI oSearchResult <> Null ALORS libérer oSearchResult
+     type : 458752
+   -
+     name : _UpdateStructure
+     internal_properties : CAAAAAgAAACulXZn6GYNPBAd9Kq83W4FOyxy+ZfVHGBaZpWEsrVi4mqQd3f460TwDCmhDFtfNOqfNi6blhMcOvq1KfcCO5izN8rNwYx6/xwe1h/joUKG6Ll2fUBZ/FDeAH1YSLonci3LEGfPyuEDptcWw+3WURsTi74tprvsHXw0ScWH6x7RkhW4QSUB
+     procedure_id : 1881383099432189740
+     type_code : 15
+     code : |1-
+      // Résumé : Remplit une structure contenant les informations de la mise à jour
+      // Syntaxe :
+      //[ <Résultat> = ] _UpdateStructure (<oUpdate> est objet Automation)
+      //
+      // Paramètres :
+      //	oUpdate (objet Automation) : Objet OLE représentant une mise à jour
+      // Valeur de retour :
+      // 	Type indéterminé : // Structure de type stUpdate
+      //
+      // Exemple :
+      //
+      Procédure PRIVEE _UpdateStructure(oUpdate est un objet OLE dynamique)
+      
+      // Variable
+      pstUpdate est un stUpdate dynamique = Null
+      
+      SI oUpdate <> Null ALORS
+      	pstUpdate = allouer un stUpdate
+      	pstUpdate.bDejaTelecharge = oUpdate>>IsDownloaded
+      	pstUpdate.nCPUNecessaire = oUpdate>>RecommendedCPUSpeed	
+      	pstUpdate.nDisqueNecessaire = oUpdate>>RecommendedHardDiskSpace		
+      	pstUpdate.nRAMNecessaire = oUpdate>>RecommendedMemory	
+      	pstUpdate.sNiveau = oUpdate>>MsrcSeverity
+      	pstUpdate.sTitre = oUpdate>>Title
+      	pstUpdate.sDescription = oUpdate>>Description
+      	
+      	SELON oUpdate>>Type
+      		CAS 1:
+      			pstUpdate.sType = "Software"	
+      		CAS 2:
+      			pstUpdate.sType = "Driver"
+      		AUTRE CAS:
+      			pstUpdate.sType = <§@1a1abfcd00d8f139000b§>
+      	FIN
+      	
+      	Si pstUpdate.sNiveau = "" ALORS pstUpdate.sNiveau = <§@1a1abfcd00d8f139000c§>
+      FIN
+      
+      RENVOYER pstUpdate
+      
+      CAS ERREUR:
+      	gsMsgErreur = <§@1a1abfcd00d8f139000d§>+RC+<§@1a1abfcd00d8f1390005§>
+      	RENVOYER Null
+      CAS EXCEPTION:
+      	gsMsgErreur = <§@1a1abfcd00d8f139000d§>+RC+<§@1a1abfcd00d8f1390005§>
+      	RENVOYER Null
+     type : 458752
+  procedure_templates : []
+  property_templates : []
+ code_parameters :
+  internal_properties : CAAAAAgAAACVGQgYbalU7DKC3oH4ItDrjtcTHXXV/EuH8q0IbhyQlw==
+  original_name : COL_Collection1
+resources :
+ string_res :
+  identifier : 0x1a1abfcd00d8f139
+  internal_properties : CAAAAAgAAACm76HWfKGWp33VjXInA4cRlqArlgTTA862QGt72W2ld5Y=
+  strings :
+   -
+     text :
+      fr-FR : Impossible de récupérer les informations de la mise à jour
+     index : 0
+   -
+     text :
+      fr-FR : Impossible de récupérer les informations de la mise à jour
+     index : 1
+   -
+     text :
+      fr-FR : Impossible d'installer la mise à jour %1
+     index : 2
+   -
+     text :
+      fr-FR : Impossible d'installer la mise à jour %1
+     index : 3
+   -
+     text :
+      fr-FR : Impossible de récupérer la liste des mises à jour disponibles
+     index : 4
+   -
+     text :
+      fr-FR : Vérifiez votre connexion Internet
+     index : 5
+   -
+     text :
+      fr-FR : Vérifiez votre connexion Internet
+     index : 6
+   -
+     text :
+      fr-FR : Impossible de récupérer la liste des mises à jour disponibles
+     index : 7
+   -
+     text :
+      fr-FR : Impossible de télécharger la mise à jour %1
+     index : 8
+   -
+     text :
+      fr-FR : Impossible de télécharger la mise à jour %1
+     index : 9
+   -
+     text :
+      fr-FR : Mise à jour inconnue
+     index : 10
+   -
+     text :
+      fr-FR : Inconnu
+     index : 11
+   -
+     text :
+      fr-FR : Non renseigné
+     index : 12
+   -
+     text :
+      fr-FR : "Impossible de récupérer les informations de la mise à jour "
+     index : 13
+   -
+     text :
+      fr-FR : Impossible de télécharger la mise à jour %1
+     index : 14
+custom_note :
+ internal_properties : CAAAAAgAAABtB9HWVzrXO2+4NDRVK0vmzaNKrCKqH1DBX30lMmGZ
